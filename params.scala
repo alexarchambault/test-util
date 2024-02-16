@@ -1,10 +1,9 @@
 //> using dep "com.lihaoyi::os-lib:0.9.3"
 //> using dep "com.lihaoyi::pprint::0.8.1"
-//> using dep "io.get-coursier::coursier-cache:2.1.9"
 
-//> using scala "2.13.12"
+//> using scala "2.13.12", "3.3.1", "2.12.18"
 //> using jvm "17"
 
-//> using option "-Xsource:3", "-deprecation", "-feature", "-Ywarn-unused"
+//> using options "-deprecation", "-feature"
 
 //> using publish.organization "io.github.alexarchambault"
