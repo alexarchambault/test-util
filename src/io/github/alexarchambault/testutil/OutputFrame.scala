@@ -20,7 +20,7 @@ import java.io.OutputStreamWriter
 final class OutputFrame(
   out: Writer = new OutputStreamWriter(System.err),
   height: Int = math.min(10, OutputFrame.maxHeight()),
-  preamble: Seq[String] = Seq("--- running ---"),
+  preamble: Seq[String] = Seq("--- Test is running ---"),
   postamble: Seq[String] = Nil
 ) {
 
