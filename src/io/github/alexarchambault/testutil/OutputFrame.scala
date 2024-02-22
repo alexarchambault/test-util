@@ -162,7 +162,7 @@ final class OutputFrame(
         val formerPos = buffer.position()
         buffer.position(0)
         val buffer0 = buffer.slice()
-        buffer0.limit(buffer.position())
+        buffer0.limit(formerPos)
         buffer.position(formerPos)
         decoder.decode(buffer0, charBuffer, false)
         if (buffer0.position() > 0) {
@@ -172,7 +172,7 @@ final class OutputFrame(
             s"buffer.position=${buffer.position()}, buffer0.position=${buffer0.position()}"
           )
           System.arraycopy(byteArray, buffer0.position(), byteArray, 0, unread)
-          buffer.position(0)
+          buffer.position(unread)
         }
         def processLines(startIdx: Int): Int = {
           val nlIdxOpt = (startIdx until charBuffer.position()).find { idx =>
