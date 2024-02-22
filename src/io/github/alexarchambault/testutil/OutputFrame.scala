@@ -20,7 +20,7 @@ import java.io.OutputStreamWriter
 final class OutputFrame(
   out: Writer = new OutputStreamWriter(System.err),
   height: Int = math.min(10, OutputFrame.maxHeight()),
-  preamble: Seq[String] = Seq("--- running ---"),
+  preamble: Seq[String] = Seq("--- Test is running ---"),
   postamble: Seq[String] = Nil
 ) {
 
@@ -156,20 +156,22 @@ final class OutputFrame(
       val lock           = new Object
       val byteArray      = Array.ofDim[Byte](256 * 1024)
       val buffer         = ByteBuffer.wrap(byteArray)
-      var bufferWriteIdx = 0
       val charArray      = Array.ofDim[Char](256 * 1024)
       val charBuffer     = CharBuffer.wrap(charArray)
       def processBuffer(): Unit = {
-        val buffer0 = buffer.slice(0, bufferWriteIdx)
+        val formerPos = buffer.position()
+        buffer.position(0)
+        val buffer0 = buffer.slice()
+        buffer0.limit(buffer.position())
+        buffer.position(formerPos)
         decoder.decode(buffer0, charBuffer, false)
         if (buffer0.position() > 0) {
-          val len = bufferWriteIdx - buffer0.position()
+          val len = buffer.position() - buffer0.position()
           assert(
             len >= 0,
-            s"bufferWriteIdx=$bufferWriteIdx, buffer0.position=${buffer0.position()}"
+            s"buffer.position=${buffer.position()}, buffer0.position=${buffer0.position()}"
           )
           System.arraycopy(byteArray, buffer0.position(), byteArray, 0, len)
-          bufferWriteIdx = len
           buffer.position(0)
         }
         def processLines(startIdx: Int): Int = {
@@ -186,7 +188,7 @@ final class OutputFrame(
           }
           nlIdxOpt match {
             case Some(nlIdx) =>
-              val line = charBuffer.slice(startIdx, nlIdx - startIdx).toString().stripSuffix("\r")
+              val line = new String(charArray, startIdx, nlIdx - startIdx).stripSuffix("\r")
               addLine(line)
               processLines(nlIdx + 1)
             case None =>
@@ -212,14 +214,12 @@ final class OutputFrame(
       }
       override def write(b: Int) = lock.synchronized {
         baos.write(b)
-        buffer.put(bufferWriteIdx, b.toByte)
-        bufferWriteIdx += 1
+        buffer.put(b.toByte)
         processBuffer()
       }
       override def write(b: Array[Byte], off: Int, len: Int) = lock.synchronized {
         baos.write(b, off, len)
-        buffer.put(bufferWriteIdx, b, off, len)
-        bufferWriteIdx += len
+        buffer.put(b, off, len)
         processBuffer()
       }
       override def flush() =
