@@ -166,12 +166,12 @@ final class OutputFrame(
         buffer.position(formerPos)
         decoder.decode(buffer0, charBuffer, false)
         if (buffer0.position() > 0) {
-          val len = buffer.position() - buffer0.position()
+          val unread = buffer.position() - buffer0.position()
           assert(
-            len >= 0,
+            unread >= 0,
             s"buffer.position=${buffer.position()}, buffer0.position=${buffer0.position()}"
           )
-          System.arraycopy(byteArray, buffer0.position(), byteArray, 0, len)
+          System.arraycopy(byteArray, buffer0.position(), byteArray, 0, unread)
           buffer.position(0)
         }
         def processLines(startIdx: Int): Int = {
