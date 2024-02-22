@@ -126,7 +126,7 @@ object TestUtil {
                 }
               )
               if (processShouldExit) {
-                errorOutput.println(s"Waiting for sub-process ${subProc.wrapped.pid()} to exit")
+                errorOutput.println(s"Waiting for sub-process${pid(subProc.wrapped).fold("")(" " + _)} to exit")
                 errorOutput.flush()
                 subProc.waitFor()
               }
@@ -273,5 +273,16 @@ object TestUtil {
       x.value
     }
   }
+
+  private lazy val pidMethodOpt =
+    try Some(classOf[Process].getMethod("pid"))
+    catch {
+      case _: NoSuchMethodException =>
+        None
+    }
+  private def pid(proc: Process): Option[Int] =
+    pidMethodOpt.map { m =>
+      m.invoke(proc).asInstanceOf[Int]
+    }
 
 }
