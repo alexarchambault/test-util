@@ -280,9 +280,9 @@ object TestUtil {
       case _: NoSuchMethodException =>
         None
     }
-  private def pid(proc: Process): Option[Int] =
+  private def pid(proc: Process): Option[Long] =
     pidMethodOpt.map { m =>
-      m.invoke(proc).asInstanceOf[Int]
+      m.invoke(proc).asInstanceOf[Long]
     }
 
 }
