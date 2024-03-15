@@ -151,80 +151,7 @@ final class OutputFrame(
 
   lazy val baos = new ByteArrayOutputStream
   lazy val outputStream: OutputStream =
-    new OutputStream {
-      val decoder        = StandardCharsets.UTF_8.newDecoder()
-      val lock           = new Object
-      val byteArray      = Array.ofDim[Byte](256 * 1024)
-      val buffer         = ByteBuffer.wrap(byteArray)
-      val charArray      = Array.ofDim[Char](256 * 1024)
-      val charBuffer     = CharBuffer.wrap(charArray)
-      def processBuffer(): Unit = {
-        val formerPos = buffer.position()
-        buffer.position(0)
-        val buffer0 = buffer.slice()
-        buffer0.limit(formerPos)
-        buffer.position(formerPos)
-        decoder.decode(buffer0, charBuffer, false)
-        if (buffer0.position() > 0) {
-          val unread = buffer.position() - buffer0.position()
-          assert(
-            unread >= 0,
-            s"buffer.position=${buffer.position()}, buffer0.position=${buffer0.position()}"
-          )
-          System.arraycopy(byteArray, buffer0.position(), byteArray, 0, unread)
-          buffer.position(unread)
-        }
-        def processLines(startIdx: Int): Int = {
-          val nlIdxOpt = (startIdx until charBuffer.position()).find { idx =>
-            try
-              charBuffer.get(idx) == '\n'
-            catch {
-              case e: IndexOutOfBoundsException =>
-                throw new Exception(
-                  s"idx=$idx, startIdx=$startIdx, charBuffer.position=${charBuffer.position()}",
-                  e
-                )
-            }
-          }
-          nlIdxOpt match {
-            case Some(nlIdx) =>
-              val line = new String(charArray, startIdx, nlIdx - startIdx).stripSuffix("\r")
-              addLine(line)
-              processLines(nlIdx + 1)
-            case None =>
-              startIdx
-          }
-        }
-        val remainingIdx = processLines(0)
-        try System.arraycopy(
-            charArray,
-            remainingIdx,
-            charArray,
-            0,
-            charBuffer.position() - remainingIdx
-          )
-        catch {
-          case e: ArrayIndexOutOfBoundsException =>
-            throw new Exception(
-              s"remainingIdx=$remainingIdx, charBuffer.position=${charBuffer.position()}",
-              e
-            )
-        }
-        charBuffer.position(charBuffer.position() - remainingIdx)
-      }
-      override def write(b: Int) = lock.synchronized {
-        baos.write(b)
-        buffer.put(b.toByte)
-        processBuffer()
-      }
-      override def write(b: Array[Byte], off: Int, len: Int) = lock.synchronized {
-        baos.write(b, off, len)
-        buffer.put(b, off, len)
-        processBuffer()
-      }
-      override def flush() =
-        baos.flush()
-    }
+    OutputFrame.lineProcessorOutputStream(addLine, Some(baos))
   lazy val printStream: PrintStream =
     new PrintStream(outputStream)
   def output(): Array[Byte] =
@@ -303,5 +230,84 @@ object OutputFrame {
     def next: Line =
       next0
   }
+
+  def lineProcessorOutputStream(
+    processLine: String => Unit,
+    teeTo: Option[OutputStream] = None
+  ): OutputStream =
+    new OutputStream {
+      val decoder        = StandardCharsets.UTF_8.newDecoder()
+      val lock           = new Object
+      val byteArray      = Array.ofDim[Byte](256 * 1024)
+      val buffer         = ByteBuffer.wrap(byteArray)
+      val charArray      = Array.ofDim[Char](256 * 1024)
+      val charBuffer     = CharBuffer.wrap(charArray)
+      def processBuffer(): Unit = {
+        val formerPos = buffer.position()
+        buffer.position(0)
+        val buffer0 = buffer.slice()
+        buffer0.limit(formerPos)
+        buffer.position(formerPos)
+        decoder.decode(buffer0, charBuffer, false)
+        if (buffer0.position() > 0) {
+          val unread = buffer.position() - buffer0.position()
+          assert(
+            unread >= 0,
+            s"buffer.position=${buffer.position()}, buffer0.position=${buffer0.position()}"
+          )
+          System.arraycopy(byteArray, buffer0.position(), byteArray, 0, unread)
+          buffer.position(unread)
+        }
+        def processLines(startIdx: Int): Int = {
+          val nlIdxOpt = (startIdx until charBuffer.position()).find { idx =>
+            try
+              charBuffer.get(idx) == '\n'
+            catch {
+              case e: IndexOutOfBoundsException =>
+                throw new Exception(
+                  s"idx=$idx, startIdx=$startIdx, charBuffer.position=${charBuffer.position()}",
+                  e
+                )
+            }
+          }
+          nlIdxOpt match {
+            case Some(nlIdx) =>
+              val line = new String(charArray, startIdx, nlIdx - startIdx).stripSuffix("\r")
+              processLine(line)
+              processLines(nlIdx + 1)
+            case None =>
+              startIdx
+          }
+        }
+        val remainingIdx = processLines(0)
+        try System.arraycopy(
+            charArray,
+            remainingIdx,
+            charArray,
+            0,
+            charBuffer.position() - remainingIdx
+          )
+        catch {
+          case e: ArrayIndexOutOfBoundsException =>
+            throw new Exception(
+              s"remainingIdx=$remainingIdx, charBuffer.position=${charBuffer.position()}",
+              e
+            )
+        }
+        charBuffer.position(charBuffer.position() - remainingIdx)
+      }
+      override def write(b: Int) = lock.synchronized {
+        teeTo.foreach(_.write(b))
+        buffer.put(b.toByte)
+        processBuffer()
+      }
+      override def write(b: Array[Byte], off: Int, len: Int) = lock.synchronized {
+        teeTo.foreach(_.write(b, off, len))
+        buffer.put(b, off, len)
+        processBuffer()
+      }
+      override def flush() =
+        teeTo.foreach(_.flush())
+    }
 
 }
