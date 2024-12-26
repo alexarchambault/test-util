@@ -21,7 +21,8 @@ final class OutputFrame(
   out: Writer = new OutputStreamWriter(System.err),
   height: Int = math.min(10, OutputFrame.maxHeight()),
   preamble: Seq[String] = Seq("--- Test is running ---"),
-  postamble: Seq[String] = Nil
+  postamble: Seq[String] = Nil,
+  widthShift: Int = 0
 ) {
 
   private val lock = new Object
@@ -70,7 +71,7 @@ final class OutputFrame(
     new Runnable {
       def run() = {
         val (it, newFirst) = lines.linesIteratorAndFirstElem()
-        val width          = ConsoleDim.width()
+        val width          = ConsoleDim.width() + widthShift
 
         if ((newFirst ne currentFirst) || width != currentWidth) {
           currentFirst = newFirst

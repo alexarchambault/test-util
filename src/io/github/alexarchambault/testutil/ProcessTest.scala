@@ -15,14 +15,16 @@ object ProcessTest {
     enableOutputFrame: Boolean = true,
     enableSilentOutput: Boolean = true,
     printOutputOnError: Boolean = true,
-    cleanUp: Boolean = true
+    cleanUp: Boolean = true,
+    newOutputFrame: () => OutputFrame = () => new OutputFrame()
   )(
     content: (os.SubPath, os.Source)*
   )(f: (os.Path, os.SubProcess, () => Unit, TestOutput, Int) => T): T = {
 
     val output = new TestOutput(
       enableOutputFrame,
-      enableSilentOutput
+      enableSilentOutput,
+      newOutputFrame = newOutputFrame
     )
 
     var success = false

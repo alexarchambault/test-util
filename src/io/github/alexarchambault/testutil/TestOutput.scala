@@ -8,14 +8,15 @@ import java.io.IOException
 
 class TestOutput(
   enableOutputFrame: Boolean,
-  enableSilentOutput: Boolean
+  enableSilentOutput: Boolean,
+  newOutputFrame: () => OutputFrame = () => new OutputFrame()
 ) extends AutoCloseable {
 
   val baos = new ByteArrayOutputStream
 
   val outputFrameOpt =
     if (enableSilentOutput && enableOutputFrame)
-      Some(new OutputFrame())
+      Some(newOutputFrame())
     else
       None
   val outputStreamOpt: Option[OutputStream] =
